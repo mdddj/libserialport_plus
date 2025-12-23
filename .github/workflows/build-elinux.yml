@@ -42,8 +42,7 @@ jobs:
 
       - name: Setup flutter-elinux
         run: |
-          cd ~/flutter-elinux
-          ./tools/setup.sh
+          flutter-elinux doctor
 
       - name: Get dependencies
         run: |
