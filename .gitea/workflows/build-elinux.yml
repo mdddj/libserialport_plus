@@ -32,8 +32,7 @@ jobs:
       - name: Setup Flutter (cached in /opt/flutter-cache)
         run: |
           CACHE_DIR="/opt/flutter-cache"
-          sudo mkdir -p $CACHE_DIR
-          sudo chmod 777 $CACHE_DIR
+          mkdir -p $CACHE_DIR
           
           # Cache Flutter SDK
           if [ ! -d "$CACHE_DIR/flutter" ]; then
