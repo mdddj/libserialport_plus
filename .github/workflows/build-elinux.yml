@@ -36,11 +36,13 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ github.server_url == 'https://github.com' && 'stable' || 'master' }}
+          flutter-version: ${{ github.server_url == 'https://github.com' && '' || '3.24.0' }}
+          git-source: ${{ github.server_url == 'https://github.com' && 'https://github.com/flutter/flutter.git' || 'https://ghproxy.com/https://github.com/flutter/flutter' }}
 
       - name: Clone flutter-elinux
         run: |
-          git clone https://github.com/sony/flutter-elinux.git ~/flutter-elinux
+          git clone ${{ github.server_url == 'https://github.com' && 'https://github.com/sony/flutter-elinux.git' || 'https://ghproxy.com/https://github.com/sony/flutter-elinux.git' }} ~/flutter-elinux
           echo "$HOME/flutter-elinux/bin" >> $GITHUB_PATH
 
       - name: Setup flutter-elinux
