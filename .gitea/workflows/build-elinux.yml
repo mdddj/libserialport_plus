@@ -34,10 +34,12 @@ jobs:
           CACHE_DIR="/opt/flutter-cache"
           mkdir -p $CACHE_DIR
           
-          # Cache Flutter SDK
+          # Cache Flutter SDK - try multiple mirrors
           if [ ! -d "$CACHE_DIR/flutter" ]; then
             echo "Downloading Flutter SDK..."
-            git clone https://ghproxy.com/https://github.com/flutter/flutter.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter
+            git clone https://gitee.com/mirrors/Flutter.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter || \
+            git clone https://mirrors.tuna.tsinghua.edu.cn/git/flutter-sdk.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter || \
+            git clone https://github.com/flutter/flutter.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter
           else
             echo "Using cached Flutter SDK"
           fi
@@ -45,10 +47,15 @@ jobs:
           # Cache flutter-elinux
           if [ ! -d "$CACHE_DIR/flutter-elinux" ]; then
             echo "Downloading flutter-elinux..."
-            git clone https://ghproxy.com/https://github.com/sony/flutter-elinux.git --depth 1 $CACHE_DIR/flutter-elinux
+            git clone https://gitee.com/panda-mute/flutter-elinux.git --depth 1 $CACHE_DIR/flutter-elinux || \
+            git clone https://github.com/sony/flutter-elinux.git --depth 1 $CACHE_DIR/flutter-elinux
           else
             echo "Using cached flutter-elinux"
           fi
+          
+          # Use China mirror for Flutter artifacts
+          export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+          export PUB_HOSTED_URL=https://pub.flutter-io.cn
           
           export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter/bin:$PATH"
           flutter precache --linux
@@ -59,6 +66,8 @@ jobs:
           CACHE_DIR="/opt/flutter-cache"
           export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter/bin:$PATH"
           export PUB_CACHE="$CACHE_DIR/pub-cache"
+          export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
+          export PUB_HOSTED_URL=https://pub.flutter-io.cn
           mkdir -p $PUB_CACHE
           
           cd example
