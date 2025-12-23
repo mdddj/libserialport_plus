@@ -7,18 +7,26 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  # ========== 修改这里适配你的项目 ==========
+  RUNNER_LABEL: kky              # 你的 Gitea runner 标签
+  APP_DIR: example               # Flutter 应用目录 (普通项目用 . , 插件项目用 example)
+  FLUTTER_VERSION: "3.24.0"      # Flutter 版本
+  # =========================================
+
 jobs:
   build-elinux:
-    runs-on: kky
+    runs-on: ${{ env.RUNNER_LABEL }}
     
     strategy:
       matrix:
-        target: [x64]
-        backend: [wayland, x11]
+        target: [x64]            # 可选: x64, arm64 (arm64 需要交叉编译工具链)
+        backend: [wayland, x11]  # 可选: wayland, x11, gbm, eglstream
     
     steps:
       - name: Checkout
         run: |
+          rm -rf ./* ./.*  2>/dev/null || true
           git clone --recursive ${{ gitea.server_url }}/${{ gitea.repository }}.git .
           git checkout ${{ gitea.sha }}
 
@@ -29,19 +37,19 @@ jobs:
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
             curl git unzip xz-utils zip || true
 
-      - name: Setup Flutter (cached in /opt/flutter-cache)
+      - name: Setup Flutter (cached)
         run: |
           CACHE_DIR="/opt/flutter-cache"
           mkdir -p $CACHE_DIR
           
-          # Cache Flutter SDK - try multiple mirrors
-          if [ ! -d "$CACHE_DIR/flutter" ]; then
-            echo "Downloading Flutter SDK..."
-            git clone https://gitee.com/mirrors/Flutter.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter || \
-            git clone https://mirrors.tuna.tsinghua.edu.cn/git/flutter-sdk.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter || \
-            git clone https://github.com/flutter/flutter.git -b 3.24.0 --depth 1 $CACHE_DIR/flutter
+          # Cache Flutter SDK - try multiple China mirrors
+          if [ ! -d "$CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }}" ]; then
+            echo "Downloading Flutter SDK ${{ env.FLUTTER_VERSION }}..."
+            git clone https://gitee.com/mirrors/Flutter.git -b ${{ env.FLUTTER_VERSION }} --depth 1 $CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }} || \
+            git clone https://mirrors.tuna.tsinghua.edu.cn/git/flutter-sdk.git -b ${{ env.FLUTTER_VERSION }} --depth 1 $CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }} || \
+            git clone https://github.com/flutter/flutter.git -b ${{ env.FLUTTER_VERSION }} --depth 1 $CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }}
           else
-            echo "Using cached Flutter SDK"
+            echo "Using cached Flutter SDK ${{ env.FLUTTER_VERSION }}"
           fi
           
           # Cache flutter-elinux
@@ -57,20 +65,20 @@ jobs:
           export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
           export PUB_HOSTED_URL=https://pub.flutter-io.cn
           
-          export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter/bin:$PATH"
+          export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }}/bin:$PATH"
           flutter precache --linux
           flutter-elinux doctor
 
       - name: Build eLinux (${{ matrix.target }} - ${{ matrix.backend }})
         run: |
           CACHE_DIR="/opt/flutter-cache"
-          export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter/bin:$PATH"
+          export PATH="$CACHE_DIR/flutter-elinux/bin:$CACHE_DIR/flutter-${{ env.FLUTTER_VERSION }}/bin:$PATH"
           export PUB_CACHE="$CACHE_DIR/pub-cache"
           export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
           export PUB_HOSTED_URL=https://pub.flutter-io.cn
           mkdir -p $PUB_CACHE
           
-          cd example
+          cd ${{ env.APP_DIR }}
           flutter pub get
           flutter-elinux build elinux \
             --target-arch=${{ matrix.target }} \
@@ -79,6 +87,10 @@ jobs:
 
       - name: Package artifact
         run: |
-          cd example/build/elinux/${{ matrix.target }}/release
+          cd ${{ env.APP_DIR }}/build/elinux/${{ matrix.target }}/release
           tar -czvf elinux-${{ matrix.target }}-${{ matrix.backend }}.tar.gz bundle/
-          echo "Build completed: elinux-${{ matrix.target }}-${{ matrix.backend }}.tar.gz"
+          echo "============================================"
+          echo "Build completed!"
+          echo "Artifact: elinux-${{ matrix.target }}-${{ matrix.backend }}.tar.gz"
+          echo "Location: ${{ env.APP_DIR }}/build/elinux/${{ matrix.target }}/release/"
+          echo "============================================"
