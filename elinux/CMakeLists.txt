@@ -10,6 +10,8 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # Invoke the build for native code shared with the other target platforms.
 # This can be changed to accommodate different builds.
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../src" "${CMAKE_CURRENT_BINARY_DIR}/shared")
+
+# Include config.h for libserialport
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # List of absolute paths to libraries that should be bundled with the plugin.
