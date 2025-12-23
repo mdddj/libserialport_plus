@@ -1,0 +1,66 @@
+name: Build eLinux
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-elinux:
+    runs-on: ubuntu-22.04
+    
+    strategy:
+      matrix:
+        target: [x64, arm64]
+        backend: [wayland, x11]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev \
+            curl git unzip xz-utils zip
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Clone flutter-elinux
+        run: |
+          git clone https://github.com/sony/flutter-elinux.git ~/flutter-elinux
+          echo "$HOME/flutter-elinux/bin" >> $GITHUB_PATH
+
+      - name: Setup flutter-elinux
+        run: |
+          cd ~/flutter-elinux
+          ./tools/setup.sh
+
+      - name: Get dependencies
+        run: |
+          cd example
+          flutter pub get
+
+      - name: Build eLinux (${{ matrix.target }} - ${{ matrix.backend }})
+        run: |
+          cd example
+          flutter-elinux build elinux \
+            --target-arch=${{ matrix.target }} \
+            --target-backend-type=${{ matrix.backend }} \
+            --release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: elinux-${{ matrix.target }}-${{ matrix.backend }}
+          path: example/build/elinux/${{ matrix.target }}/release/bundle/
+          retention-days: 7
