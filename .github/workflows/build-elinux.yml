@@ -3,6 +3,8 @@ name: Build eLinux
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -58,9 +60,33 @@ jobs:
             --target-backend-type=${{ matrix.backend }} \
             --release
 
+      - name: Package artifact
+        run: |
+          cd example/build/elinux/${{ matrix.target }}/release
+          tar -czvf elinux-${{ matrix.target }}-${{ matrix.backend }}.tar.gz bundle/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: elinux-${{ matrix.target }}-${{ matrix.backend }}
-          path: example/build/elinux/${{ matrix.target }}/release/bundle/
+          path: example/build/elinux/${{ matrix.target }}/release/elinux-${{ matrix.target }}-${{ matrix.backend }}.tar.gz
           retention-days: 7
+
+  release:
+    needs: build-elinux
+    runs-on: ubuntu-22.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
