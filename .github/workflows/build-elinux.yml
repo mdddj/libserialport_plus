@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-elinux:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-22.04' || 'kky' }}
     
     strategy:
       matrix:
@@ -74,7 +74,7 @@ jobs:
 
   release:
     needs: build-elinux
-    runs-on: ubuntu-22.04
+    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-22.04' || 'kky' }}
     if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
