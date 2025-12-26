@@ -27,8 +27,15 @@ jobs:
       - name: Checkout
         run: |
           rm -rf ./* ./.*  2>/dev/null || true
-          git clone --recursive ${{ gitea.server_url }}/${{ gitea.repository }}.git .
+          git clone ${{ gitea.server_url }}/${{ gitea.repository }}.git .
           git checkout ${{ gitea.sha }}
+          
+          # Initialize submodules with mirror for China network
+          git submodule init
+          # Try ghproxy mirror first, fallback to original GitHub URL
+          git config submodule.src/libserialport.url https://ghproxy.com/https://github.com/sigrokproject/libserialport.git || true
+          git submodule update --recursive || \
+          (git config submodule.src/libserialport.url https://github.com/sigrokproject/libserialport.git && git submodule update --recursive)
 
       - name: Install dependencies
         run: |
